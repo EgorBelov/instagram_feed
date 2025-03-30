@@ -3,7 +3,7 @@ from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconn
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker, selectinload
 from sqlalchemy.future import select
-from models import Base, Story, User, Post, Comment, Reaction  # Предполагается, что модели в файле models.py
+from models.models import Base, Story, User, Post, Comment, Reaction  # Предполагается, что модели в файле models.py
 import datetime
 from fastapi.responses import FileResponse, HTMLResponse
 
