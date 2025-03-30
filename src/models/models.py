@@ -63,3 +63,11 @@ class Reaction(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     post = relationship('Post', back_populates='reactions')
     user = relationship('User', back_populates='reactions')
+
+
+class Notification(Base):
+    __tablename__ = 'notifications'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    message = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)

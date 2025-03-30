@@ -1,6 +1,11 @@
 # app/main.py
 import sys
+
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 sys.path.append("E:/HSE_HERNYA/python_4_course/instagram_feed/")
+from src.infrastructure.repositories import NotificationRepository
+from src.models.models import User
 from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse
 import os
@@ -48,6 +53,7 @@ async def create_story_endpoint(user_id: int, image_url: str, db=Depends(get_db)
     except Exception as e:
         logger.error(f"Ошибка создания истории: {e}")
         raise HTTPException(status_code=500, detail="Ошибка создания истории")
+    
     return result
 
 @app.get("/stories")
@@ -59,31 +65,17 @@ async def get_stories_endpoint(user_id: int, db=Depends(get_db)):
         raise HTTPException(status_code=500, detail="Ошибка получения историй")
     return stories
 
-# WebSocket для уведомлений (упрощённый пример)
-active_connections = {}
+
 
 @app.websocket("/ws/feed/{user_id}")
 async def feed_websocket(websocket: WebSocket, user_id: int):
     await websocket.accept()
-    active_connections[int(user_id)] = websocket
+    services.active_connections[int(user_id)] = websocket
     try:
         while True:
             # Здесь можно обрабатывать входящие сообщения от клиента, если нужно.
             await websocket.receive_text()
     except WebSocketDisconnect:
-        active_connections.pop(int(user_id), None)
+        services.active_connections.pop(int(user_id), None)
         logger.info(f"WebSocket для пользователя {user_id} отключён")
 
-# async def notify_friends(author_id: int, post_data: dict, db: AsyncSession):
-#     # Явно загружаем автора вместе с подписчиками
-#     result = await db.execute(
-#         select(User).options(selectinload(User.followers)).where(User.id == author_id)
-#     )
-#     author = result.scalar_one_or_none()
-#     if not author:
-#         return
-
-#     for follower in author.followers:
-#         ws = active_connections.get(follower.id)
-#         if ws:
-#             await ws.send_json(post_data)

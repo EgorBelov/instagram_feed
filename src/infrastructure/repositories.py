@@ -1,5 +1,5 @@
 # infrastructure/repositories.py
-from src.models.models import Post, Story, User
+from src.models.models import Notification, Post, Story, User
 from src.domain.commands import CreatePostCommand, CreateStoryCommand
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -83,3 +83,27 @@ class UserRepository:
             "image_url": s.image_url,
             "created_at": s.created_at.isoformat()
         } for s in stories]
+
+
+class NotificationRepository:
+    def __init__(self, db):
+        self.db = db
+
+    async def create_notification(self, user_id: int, message: str) -> Notification:
+        notification = Notification(user_id=user_id, message=message)
+        self.db.add(notification)
+        await self.db.flush()  # для получения id
+        await self.db.commit()
+        return notification
+
+    async def get_notifications(self, user_id: int) -> list:
+        result = await self.db.execute(
+            select(Notification).where(Notification.user_id == user_id).order_by(Notification.created_at.desc())
+        )
+        notifications = result.scalars().all()
+        return [{
+            "id": n.id,
+            "user_id": n.user_id,
+            "message": n.message,
+            "created_at": n.created_at.isoformat()
+        } for n in notifications]
