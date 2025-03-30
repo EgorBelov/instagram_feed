@@ -1,9 +1,8 @@
+# infrastructure/db/init_db.py
 import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine
-from models.models import Base  # Файл models.py должен содержать определения моделей и Base
-
-# Замените DATABASE_URL на URL подключения к вашей базе данных
-DATABASE_URL = "postgresql+asyncpg://postgres:123321@localhost/inst_feed"
+from src.models import Base
+from src.infrastructure.database import DATABASE_URL
 
 async def init_db():
     engine = create_async_engine(DATABASE_URL, echo=True)
