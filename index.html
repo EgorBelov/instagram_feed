@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Instagram Feed Frontend</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #fafafa;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1,
+        h2 {
+            text-align: center;
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin: 5px 0;
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .post,
+        .story,
+        .notification {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #f9f9f9;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Instagram Feed</h1>
+
+        <!-- Создание поста -->
+        <div class="section">
+            <h2>Создать пост</h2>
+            <form id="postForm">
+                <label>Ваш User ID:
+                    <input type="number" id="postUserId" required>
+                </label>
+                <label>URL изображения:
+                    <input type="text" id="postImageUrl" required>
+                </label>
+                <label>Подпись:
+                    <input type="text" id="postCaption">
+                </label>
+                <button type="submit">Создать пост</button>
+            </form>
+        </div>
+
+        <!-- Просмотр ленты -->
+        <div class="section">
+            <h2>Лента постов</h2>
+            <button id="loadFeedBtn">Загрузить ленту</button>
+            <div id="feedPosts"></div>
+        </div>
+
+        <!-- Создание истории -->
+        <div class="section">
+            <h2>Создать историю</h2>
+            <form id="storyForm">
+                <label>Ваш User ID:
+                    <input type="number" id="storyUserId" required>
+                </label>
+                <label>URL изображения:
+                    <input type="text" id="storyImageUrl" required>
+                </label>
+                <button type="submit">Создать историю</button>
+            </form>
+        </div>
+
+        <!-- Просмотр историй -->
+        <div class="section">
+            <h2>Истории</h2>
+            <button id="loadStoriesBtn">Загрузить истории</button>
+            <div id="stories"></div>
+        </div>
+
+        <!-- WebSocket уведомления -->
+        <div class="section">
+            <h2>Уведомления</h2>
+            <label>Ваш User ID:
+                <input type="number" id="wsUserId">
+            </label>
+            <button id="connectWsBtn">Подключиться к уведомлениям</button>
+            <div id="notifications"></div>
+        </div>
+    </div>
+
+    <script>
+        // Создание поста
+        document.getElementById('postForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const userId = document.getElementById('postUserId').value;
+            const imageUrl = document.getElementById('postImageUrl').value;
+            const caption = document.getElementById('postCaption').value;
+            try {
+                // Обратите внимание: параметры передаются через query string
+                const response = await fetch(`/posts?user_id=${userId}&image_url=${encodeURIComponent(imageUrl)}&caption=${encodeURIComponent(caption)}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                alert(`Пост создан с ID: ${data.post_id}`);
+            } catch (error) {
+                console.error('Ошибка создания поста:', error);
+                alert('Ошибка создания поста');
+            }
+        });
+
+        // Загрузка ленты постов
+        document.getElementById('loadFeedBtn').addEventListener('click', async function () {
+            const userId = prompt("Введите ваш User ID для загрузки ленты:", "1");
+            if (!userId) return;
+            try {
+                const response = await fetch(`/feed?user_id=${userId}`);
+                const posts = await response.json();
+                const feedDiv = document.getElementById('feedPosts');
+                feedDiv.innerHTML = "";
+                posts.forEach(post => {
+                    const postDiv = document.createElement('div');
+                    postDiv.classList.add('post');
+                    postDiv.innerHTML = `
+            <strong>Пользователь ${post.user_id}</strong><br>
+            <img src="${post.image_url}" alt="Изображение поста"><br>
+            <p>${post.caption}</p>
+            <small>${post.created_at}</small>
+          `;
+                    feedDiv.appendChild(postDiv);
+                });
+            } catch (error) {
+                console.error('Ошибка загрузки ленты:', error);
+            }
+        });
+
+        // Создание истории
+        document.getElementById('storyForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const userId = document.getElementById('storyUserId').value;
+            const imageUrl = document.getElementById('storyImageUrl').value;
+            try {
+                const response = await fetch(`/stories?user_id=${userId}&image_url=${encodeURIComponent(imageUrl)}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                alert(`История создана с ID: ${data.story_id}`);
+            } catch (error) {
+                console.error('Ошибка создания истории:', error);
+                alert('Ошибка создания истории');
+            }
+        });
+
+        // Загрузка историй
+        document.getElementById('loadStoriesBtn').addEventListener('click', async function () {
+            const userId = prompt("Введите ваш User ID для загрузки историй:", "1");
+            if (!userId) return;
+            try {
+                const response = await fetch(`/stories?user_id=${userId}`);
+                const stories = await response.json();
+                const storiesDiv = document.getElementById('stories');
+                storiesDiv.innerHTML = "";
+                stories.forEach(story => {
+                    const storyDiv = document.createElement('div');
+                    storyDiv.classList.add('story');
+                    storyDiv.innerHTML = `
+            <strong>Пользователь ${story.user_id}</strong><br>
+            <img src="${story.image_url}" alt="Изображение истории"><br>
+            <small>${story.created_at}</small>
+          `;
+                    storiesDiv.appendChild(storyDiv);
+                });
+            } catch (error) {
+                console.error('Ошибка загрузки историй:', error);
+            }
+        });
+
+        // WebSocket уведомления
+        let ws;
+        document.getElementById('connectWsBtn').addEventListener('click', function () {
+            const userId = document.getElementById('wsUserId').value;
+            if (!userId) {
+                alert("Введите ваш User ID для подключения");
+                return;
+            }
+            ws = new WebSocket(`ws://localhost:8000/ws/feed/${userId}`);
+            ws.onopen = () => {
+                console.log("WebSocket подключен");
+                document.getElementById('notifications').innerHTML += `<div class="notification">Подключено как User ${userId}</div>`;
+            };
+            ws.onmessage = (event) => {
+                document.getElementById('notifications').innerHTML += `<div class="notification">Уведомление: ${event.data}</div>`;
+            };
+            ws.onerror = (error) => {
+                console.error("WebSocket ошибка:", error);
+                alert("Ошибка WebSocket, смотрите консоль");
+            };
+            ws.onclose = () => {
+                document.getElementById('notifications').innerHTML += `<div class="notification">WebSocket отключен</div>`;
+            };
+        });
+    </script>
+</body>
+
+</html>
